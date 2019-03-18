@@ -192,39 +192,43 @@ namespace Microsoft.Build.Evaluation
                         }
 
                         // Other toolsets are installed in the xbuild directory
-                        var xbuildToolsetsDir = Path.Combine(libraryPath, $"xbuild{Path.DirectorySeparatorChar}");
-                        if (FileSystems.Default.DirectoryExists(xbuildToolsetsDir))
+                        var xbuildDirs = new string[] { "msbuild", "xbuild" };
+                        foreach (var xbuildDir in xbuildDirs)
                         {
-                            var r = new Regex(Regex.Escape(xbuildToolsetsDir) + @"\d+\.\d+");
-                            foreach (var d in Directory.GetDirectories(xbuildToolsetsDir).Where(d => r.IsMatch(d)))
+                            var xbuildToolsetsDir = Path.Combine(libraryPath, $"{xbuildDir}{Path.DirectorySeparatorChar}");
+                            if (FileSystems.Default.DirectoryExists(xbuildToolsetsDir))
                             {
-                                var version = Path.GetFileName(d);
-                                var binPath = Path.Combine(d, "bin");
-                                if (toolsets.ContainsKey(version))
+                                var r = new Regex(Regex.Escape(xbuildToolsetsDir) + @"\d+\.\d+");
+                                foreach (var d in Directory.GetDirectories(xbuildToolsetsDir).Where(d => r.IsMatch(d)))
                                 {
-                                    continue;
-                                }
+                                    var version = Path.GetFileName(d);
+                                    var binPath = Path.Combine(d, "bin");
+                                    if (toolsets.ContainsKey(version))
+                                    {
+                                        continue;
+                                    }
 
-                                if (NativeMethodsShared.IsMono && Version.TryParse(version, out Version parsedVersion) && parsedVersion.Major > 14)
-                                {
-                                    continue;
-                                }
+                                    if (NativeMethodsShared.IsMono && Version.TryParse(version, out Version parsedVersion) && parsedVersion.Major > 14)
+                                    {
+                                        continue;
+                                    }
 
-                                // Create standard properties. On Mono they are well known
-                                var buildProperties =
-                                    CreateStandardProperties(globalProperties, version, xbuildToolsetsDir, binPath);
+                                    // Create standard properties. On Mono they are well known
+                                    var buildProperties =
+                                        CreateStandardProperties(globalProperties, version, xbuildToolsetsDir, binPath);
 
-                                toolsets.Add(
-                                    version,
-                                    new Toolset(
+                                    toolsets.Add(
                                         version,
-                                        binPath,
-                                        buildProperties,
-                                        environmentProperties,
-                                        globalProperties,
-                                        null,
-                                        currentDir,
-                                        string.Empty));
+                                        new Toolset(
+                                            version,
+                                            binPath,
+                                            buildProperties,
+                                            environmentProperties,
+                                            globalProperties,
+                                            null,
+                                            currentDir,
+                                            string.Empty));
+                                }
                             }
                         }
                     }
